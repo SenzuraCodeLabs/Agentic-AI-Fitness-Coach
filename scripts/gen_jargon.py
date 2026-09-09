@@ -16,15 +16,25 @@ def add(canonical: str, *variants: str) -> None:
 
 
 # --- Exercises: barbell ---------------------------------------------------
-add("barbell back squat", "bb squat", "back squat", "squats", "squat")
+add("barbell back squat", "bb squat", "back squat", "squats", "squat", "squatted", "squatting")
 add("barbell front squat", "front squat", "fs", "front squats")
 add("barbell bench press", "bench", "bench press", "bp", "flat bench", "benching", "benched")
 add("incline barbell bench press", "incline bench", "incline press", "incline bp")
 add("decline barbell bench press", "decline bench", "decline press")
-add("conventional deadlift", "deadlift", "dl", "deads", "deadlifts", "conventional dl")
+add(
+    "conventional deadlift",
+    "deadlift",
+    "dl",
+    "deads",
+    "deadlifts",
+    "conventional dl",
+    "deadlifted",
+    "deadlifting",
+    "pulled",
+)
 add("sumo deadlift", "sumo", "sumo dl", "sumo deads")
 add("romanian deadlift", "rdl", "rdls", "romanian dl", "stiff leg deadlift", "sldl")
-add("overhead press", "ohp", "military press", "strict press", "shoulder press")
+add("overhead press", "ohp", "military press", "strict press", "shoulder press", "pressed")
 add("push press", "push press", "pp")
 add("barbell row", "bb row", "bent over row", "bor", "pendlay row", "barbell rows")
 add("hip thrust", "hip thrusts", "ht", "barbell hip thrust")
@@ -61,7 +71,7 @@ add("leg press", "leg presses")
 add("leg extension", "leg ext", "leg extensions", "quad extension")
 add("leg curl", "leg curls", "hamstring curl", "ham curl", "lying leg curl")
 add("calf raise", "calf raises", "standing calf raise", "seated calf raise")
-add("pull up", "pullup", "pullups", "pull ups", "chins", "chin up", "chinups")
+add("pull up", "pullup", "pullups", "pull ups", "chins", "chin up", "chinups", "pulling up")
 add("push up", "pushup", "pushups", "push ups", "press up", "pressups")
 add("dip", "dips", "tricep dips", "chest dips")
 add("plank", "planks", "front plank")
