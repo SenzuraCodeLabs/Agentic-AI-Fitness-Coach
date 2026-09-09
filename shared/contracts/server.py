@@ -116,4 +116,5 @@ def reply_envelope(
         trust=trust,  # type: ignore[arg-type]
         correlation_id=inbound.correlation_id,
         inbound=inbound,
+        subject=inbound.subject,
     )

@@ -81,6 +81,7 @@ class AgentClient:
         trust: TrustMetadata | None = None,
         correlation_id: str | None = None,
         inbound: Envelope | None = None,
+        subject: str | None = None,
     ) -> Envelope:
         """Build and sign an envelope.
 
@@ -109,6 +110,9 @@ class AgentClient:
             ),
             ttl_seconds=settings.envelope_ttl_seconds,
             trace=trace,
+            # Carried forward from the inbound message unless overridden, so a
+            # relayed turn keeps its subject across every hop.
+            subject=subject or (inbound.subject if inbound is not None else None),
         )
         return sign(envelope, settings.agent_shared_secret.get_secret_value())
 
@@ -121,6 +125,7 @@ class AgentClient:
         trust: TrustMetadata | None = None,
         correlation_id: str | None = None,
         inbound: Envelope | None = None,
+        subject: str | None = None,
     ) -> Envelope:
         """Send a signed envelope and return the peer's signed reply.
 
@@ -143,6 +148,7 @@ class AgentClient:
                 trust=trust,
                 correlation_id=cid,
                 inbound=inbound,
+                subject=subject,
             )
             try:
                 response = await self.http.post(

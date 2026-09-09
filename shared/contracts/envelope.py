@@ -32,7 +32,7 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator, model_valida
 
 from shared.contracts.enums import AgentName, Decision, Intent, ReasonCode
 
-ENVELOPE_VERSION = "1.0"
+ENVELOPE_VERSION = "1.1"
 
 # Spotlighting delimiters. Any residual free text handed to an LLM is wrapped in
 # these, with an instruction that content between them is data. The random-ish
@@ -253,6 +253,19 @@ class Envelope(BaseModel):
     sender: AgentName
     recipient: AgentName
 
+    # Whose turn this is. Added in envelope version 1.1: without it a
+    # downstream agent cannot load the right training history, so the coach
+    # could not detect a stall or progress across sessions.
+    #
+    # It sits in the SIGNED region deliberately. As an unsigned header any
+    # caller could set it to another user's id and read their history, which
+    # would be a direct authorisation bypass. Covered by the signature, only a
+    # holder of the shared secret can assert it.
+    #
+    # Optional so that service-to-service messages with no user context remain
+    # valid.
+    subject: str | None = Field(default=None, max_length=64)
+
     issued_at: datetime
     expires_at: datetime
 
@@ -303,6 +316,7 @@ class Envelope(BaseModel):
         trust: TrustMetadata,
         ttl_seconds: int = 120,
         trace: list[Hop] | None = None,
+        subject: str | None = None,
     ) -> Envelope:
         """Construct an unsigned envelope with consistent timing fields."""
         now = _utcnow()
@@ -312,6 +326,7 @@ class Envelope(BaseModel):
             trace=trace or [],
             sender=sender,
             recipient=recipient,
+            subject=subject,
             issued_at=now,
             expires_at=now + timedelta(seconds=ttl_seconds),
             intent=payload.intent,

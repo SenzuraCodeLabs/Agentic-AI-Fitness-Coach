@@ -250,6 +250,10 @@ async def chat(
                     payload=result.envelope.payload,
                     trust=result.trust,
                     correlation_id=correlation_id,
+                    # Identifies whose history the coach should load. Inside
+                    # the signed region, so it cannot be forged to read another
+                    # user's training data.
+                    subject=user_id,
                 )
             if isinstance(reply.payload, CoachReplyPayload):
                 text = reply.payload.reply_text

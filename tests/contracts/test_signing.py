@@ -283,3 +283,44 @@ def test_content_hash_is_stable_and_sensitive():
 
     different = a.model_copy(update={"correlation_id": "other"})
     assert content_hash(a) != content_hash(different)
+
+
+# --- Subject (envelope version 1.1) ----------------------------------------
+
+
+def test_subject_is_covered_by_the_signature():
+    """The subject says whose data a downstream agent should load.
+
+    As an unsigned field, any caller could set it to another user's id and read
+    their training history: a direct authorisation bypass. This test is the
+    regression guard for that.
+    """
+    payload = QueryPayload(intent=Intent.PROGRAM_QUERY, question="q", raw_text_redacted="q")
+    envelope = Envelope.build(
+        sender=AgentName.GATEWAY,
+        recipient=AgentName.GATEKEEPER,
+        correlation_id="c",
+        payload=payload,
+        trust=make_trust(),
+        subject="user-alice",
+    )
+    signed = sign(envelope, SECRET)
+    verify(signed, SECRET)
+
+    impersonated = signed.model_copy(update={"subject": "user-bob"})
+    with pytest.raises(SignatureInvalid):
+        verify(impersonated, SECRET)
+
+
+def test_subject_is_optional():
+    """Service-to-service messages with no user context stay valid."""
+    payload = QueryPayload(intent=Intent.PROGRAM_QUERY, question="q", raw_text_redacted="q")
+    envelope = Envelope.build(
+        sender=AgentName.GATEWAY,
+        recipient=AgentName.GATEKEEPER,
+        correlation_id="c",
+        payload=payload,
+        trust=make_trust(),
+    )
+    assert envelope.subject is None
+    verify(sign(envelope, SECRET), SECRET)
