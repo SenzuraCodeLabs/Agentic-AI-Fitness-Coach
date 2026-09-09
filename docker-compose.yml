@@ -1,0 +1,89 @@
+# Development compose. Source is bind-mounted and uvicorn runs with --reload so
+# edits apply without a rebuild.
+
+services:
+  mongo:
+    image: mongo:7
+    restart: unless-stopped
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo_data:/data/db
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  gateway:
+    build: .
+    command: uvicorn services.gateway.main:app --host 0.0.0.0 --port 8000 --reload
+    ports:
+      - "8000:8000"
+    env_file: .env
+    environment:
+      MONGODB_URI: mongodb://mongo:27017
+      AGENT1_URL: http://agent1_gatekeeper:8001
+      AGENT2_URL: http://agent2_researcher:8002
+      AGENT3_URL: http://agent3_coach:8003
+    volumes:
+      - ./shared:/app/shared
+      - ./services:/app/services
+      - ./eval:/app/eval
+    depends_on:
+      mongo:
+        condition: service_healthy
+
+  agent1_gatekeeper:
+    build: .
+    command: uvicorn services.agent1_gatekeeper.main:app --host 0.0.0.0 --port 8001 --reload
+    ports:
+      - "8001:8001"
+    env_file: .env
+    environment:
+      MONGODB_URI: mongodb://mongo:27017
+      AGENT2_URL: http://agent2_researcher:8002
+      AGENT3_URL: http://agent3_coach:8003
+    volumes:
+      - ./shared:/app/shared
+      - ./services:/app/services
+    depends_on:
+      mongo:
+        condition: service_healthy
+
+  agent2_researcher:
+    build: .
+    command: uvicorn services.agent2_researcher.main:app --host 0.0.0.0 --port 8002 --reload
+    ports:
+      - "8002:8002"
+    env_file: .env
+    environment:
+      MONGODB_URI: mongodb://mongo:27017
+      CHROMA_PATH: /data/chroma
+    volumes:
+      - ./shared:/app/shared
+      - ./services:/app/services
+      - chroma_data:/data/chroma
+    depends_on:
+      mongo:
+        condition: service_healthy
+
+  agent3_coach:
+    build: .
+    command: uvicorn services.agent3_coach.main:app --host 0.0.0.0 --port 8003 --reload
+    ports:
+      - "8003:8003"
+    env_file: .env
+    environment:
+      MONGODB_URI: mongodb://mongo:27017
+      AGENT2_URL: http://agent2_researcher:8002
+    volumes:
+      - ./shared:/app/shared
+      - ./services:/app/services
+    depends_on:
+      mongo:
+        condition: service_healthy
+
+volumes:
+  mongo_data:
+  chroma_data:

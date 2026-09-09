@@ -1,0 +1,35 @@
+# Secrets - never commit
+.env
+.env.local
+*.pem
+*.key
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+*.egg-info/
+.pytest_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# Data volumes
+chroma_data/
+mongo_data/
+
+# Logs
+*.log
+logs/
+
+# Node / Next.js
+node_modules/
+web/.next/
+web/out/
+web/.env*.local
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.idea/
