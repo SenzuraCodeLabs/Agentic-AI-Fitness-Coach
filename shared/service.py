@@ -68,8 +68,13 @@ def create_service(
         redoc_url=None,
     )
 
-    app.add_middleware(CorrelationIdMiddleware)
+    # Order matters and is counter-intuitive: Starlette applies middleware in
+    # reverse registration order, so the LAST registered runs OUTERMOST.
+    # CorrelationIdMiddleware must be outermost so the ContextVar is bound
+    # before anything else runs, otherwise the request logger emits "-" for the
+    # correlation ID. Registering it last is what puts it on the outside.
     app.middleware("http")(log_request_middleware)
+    app.add_middleware(CorrelationIdMiddleware)
 
     # --- RFC 7807 problem+json for every error path ------------------------
     @app.exception_handler(ProtocolError)
