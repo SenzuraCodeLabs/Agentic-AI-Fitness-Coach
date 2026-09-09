@@ -41,10 +41,26 @@ from shared.service import create_service
 
 log = get_logger("gateway")
 
+
+def _start_background_jobs() -> None:
+    """Start the weekly digest scheduler.
+
+    Wrapped so a scheduler failure cannot stop the API from serving requests:
+    a missing digest is an inconvenience, an unbootable gateway is an outage.
+    """
+    try:
+        from services.gateway.digest import start_scheduler
+
+        start_scheduler()
+    except Exception as exc:  # noqa: BLE001
+        log.warning("digest_scheduler_unavailable", error=type(exc).__name__)
+
+
 app = create_service(
     service_name="gateway",
     title="FitCoach Gateway",
     ensure_indexes=True,
+    on_startup=_start_background_jobs,
 )
 
 settings = get_settings()

@@ -35,3 +35,8 @@ Thumbs.db
 .idea/
 logs/
 services/agent1_gatekeeper/resources/oov_candidates.txt
+
+# Next.js build output
+web/.next/
+web/node_modules/
+web/out/
