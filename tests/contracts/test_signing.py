@@ -324,3 +324,42 @@ def test_subject_is_optional():
     )
     assert envelope.subject is None
     verify(sign(envelope, SECRET), SECRET)
+
+
+# --- Error uniformity -------------------------------------------------------
+
+
+def test_every_envelope_rejection_looks_identical_on_the_wire():
+    """A caller must not learn WHICH check rejected their envelope.
+
+    Found by the red-team harness (RT-EX-003): a replay returned "Envelope
+    replay detected" while a malformed body returned "could not be parsed",
+    letting an attacker tell exactly which control they had tripped.
+    """
+    from shared.errors import (
+        EnvelopeExpired,
+        EnvelopeRejected,
+        ReplayDetected,
+        SignatureInvalid,
+        UnknownPeer,
+    )
+
+    problems = [
+        EnvelopeRejected("generic").to_problem(),
+        SignatureInvalid("signature mismatch on hop 2").to_problem(),
+        EnvelopeExpired("expired 400 seconds ago").to_problem(),
+        ReplayDetected("message_id abc123 already consumed").to_problem(),
+        UnknownPeer("route gateway -> coach is not permitted").to_problem(),
+    ]
+
+    shapes = {(p.type, p.title, p.status, p.detail) for p in problems}
+    assert len(shapes) == 1, f"rejection responses differ: {shapes}"
+
+
+def test_the_specific_reason_is_still_available_for_logging():
+    """Uniform on the wire, specific in the logs. Operators need the detail."""
+    from shared.errors import ReplayDetected
+
+    error = ReplayDetected("message_id abc123 already consumed")
+    assert "abc123" in str(error.detail)
+    assert "abc123" not in (error.to_problem().detail or "")

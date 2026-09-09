@@ -40,3 +40,6 @@ services/agent1_gatekeeper/resources/oov_candidates.txt
 web/.next/
 web/node_modules/
 web/out/
+
+# Red-team evidence: regenerate with the suite; keep the report drafts
+eval/redteam/evidence/

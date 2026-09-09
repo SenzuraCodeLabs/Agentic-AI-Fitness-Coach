@@ -56,34 +56,55 @@ class ProtocolError(Exception):
 class EnvelopeRejected(ProtocolError):
     """Inbound envelope failed verification.
 
-    One error type covers bad signature, expiry, skew, replay and unknown
-    sender on purpose: the client learns the envelope was rejected, not which
-    check failed.
+    THE RESPONSE IS IDENTICAL FOR EVERY SUBCLASS. Bad signature, expiry, clock
+    skew, replay and unknown sender all produce the same status, type, title
+    and detail on the wire.
+
+    Subclasses exist so the code can be specific and the logs can record which
+    check failed. They deliberately do NOT override the wire representation.
+
+    This was found by the red-team harness, not by review: RT-EX-003 observed
+    that a replayed envelope returned "Envelope replay detected" while a
+    malformed one returned "envelope could not be parsed". An attacker probing
+    the endpoint could therefore tell exactly which control they had tripped
+    and iterate against it, which is precisely the oracle the error taxonomy
+    was meant to remove.
     """
 
     problem_type = "about:blank#envelope-rejected"
     title = "Envelope rejected"
     status = 401
+    # The single message every rejection returns.
+    public_detail = "The envelope was rejected."
+
+    def to_problem(self) -> ProblemDetail:
+        """Return the uniform rejection, discarding the specific reason.
+
+        ``self.detail`` still carries the real cause for the log line; it is
+        simply not sent to the caller.
+        """
+        return ProblemDetail(
+            type=EnvelopeRejected.problem_type,
+            title=EnvelopeRejected.title,
+            status=EnvelopeRejected.status,
+            detail=EnvelopeRejected.public_detail,
+        )
 
 
 class SignatureInvalid(EnvelopeRejected):
-    problem_type = "about:blank#signature-invalid"
-    title = "Envelope signature invalid"
+    """Bad or missing signature. Same wire response as any other rejection."""
 
 
 class EnvelopeExpired(EnvelopeRejected):
-    problem_type = "about:blank#envelope-expired"
-    title = "Envelope expired"
+    """Past expiry, or clock skew beyond tolerance."""
 
 
 class ReplayDetected(EnvelopeRejected):
-    problem_type = "about:blank#replay-detected"
-    title = "Envelope replay detected"
+    """message_id already consumed."""
 
 
 class UnknownPeer(EnvelopeRejected):
-    problem_type = "about:blank#unknown-peer"
-    title = "Unknown sender or recipient"
+    """Route not permitted, or addressed to a different service."""
 
 
 class PayloadMismatch(ProtocolError):
