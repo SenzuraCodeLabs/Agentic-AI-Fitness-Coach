@@ -182,17 +182,37 @@ rules:
     description: Request to disclose credentials or other users' data
     pattern: '(?i)\b(show|list|give|send|leak|dump|reveal)\b[^.!?]{0,30}\b(api[_\s]?key|password|token|secret|credential|other users?|all users?|database|user list)'
 
+  # The object must be system or user DATA, not any address. An earlier version
+  # matched "send|email ... to|at <address>" and fired on "email me at
+  # alice@example.com about my squats", which is an ordinary request, not an
+  # attack. Requiring a data-bearing object removes that false positive without
+  # weakening the real case.
   - id: EX-002
     category: EXFILTRATION_ATTEMPT
     weight: 0.80
-    description: Instruction to transmit data to an external destination
-    pattern: '(?i)\b(send|post|forward|email|upload|transmit)\b[^.!?]{0,30}\b(to|at)\b[^.!?]{0,20}(https?://|@[\w.-]+\.\w{2,}|webhook)'
+    description: Instruction to transmit system or user data to an external destination
+    pattern: '(?i)\b(send|post|forward|email|upload|transmit|exfiltrate)\b[^.!?]{0,40}\b(conversation|history|chat log|transcript|prompt|instruction|system|database|user (?:table|list|data)|all users|credential|api[_\s]?key|token|secret|password|training data|record)s?\b[^.!?]{0,40}\b(to|at)\b[^.!?]{0,25}(https?://|@[\w.-]+\.\w{2,}|webhook|external|server)'
+
+  - id: EX-004
+    category: EXFILTRATION_ATTEMPT
+    weight: 0.75
+    description: Sending data to a webhook or raw URL without naming the payload
+    pattern: '(?i)\b(send|post|forward|upload|transmit)\b[^.!?]{0,30}\b(this|it|that|everything|all of it)\b[^.!?]{0,25}\b(to)\b[^.!?]{0,20}(https?://|webhook)'
 
   - id: EX-003
     category: EXFILTRATION_ATTEMPT
     weight: 0.70
     description: Encoding request used to smuggle data out
     pattern: '(?i)\b(encode|base64|rot13|hex)\b[^.!?]{0,30}\b(your (?:instruction|prompt|rule)|the system|previous)'
+
+  # Destination implied rather than stated: "email the user table to me".
+  # EX-001 requires a disclosure verb such as "show"; this covers transmission
+  # verbs whose target is the requester.
+  - id: EX-005
+    category: EXFILTRATION_ATTEMPT
+    weight: 0.80
+    description: Request to transmit privileged data to the requester
+    pattern: '(?i)\b(send|email|forward|give|hand|share)\b[^.!?]{0,20}\b(me\b[^.!?]{0,20})?\b(the\s+)?(user (?:table|list|data|records?)|all users?|database|credentials?|api[_\s]?key|secrets?|passwords?|token|system prompt|instructions?)\b'
 
   # --- Authority and social engineering ------------------------------------
   - id: AU-001

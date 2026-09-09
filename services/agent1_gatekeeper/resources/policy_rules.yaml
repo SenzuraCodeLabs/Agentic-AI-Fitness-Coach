@@ -1,0 +1,171 @@
+# Policy decision matrix for L7.
+#
+# Rules are ORDERED and the FIRST MATCH WINS. Order therefore encodes
+# precedence, and the precedence here is deliberate:
+#
+#   1. Safety of the person        (medical, disordered eating, minors)
+#   2. Security of the system      (injection, exfiltration)
+#   3. Correctness of the answer   (low extraction confidence)
+#   4. Scope                       (out of domain)
+#   5. Default allow
+#
+# Medical outranks security on purpose. Someone describing chest pain during
+# bench must get a referral even if their message also trips a threat rule; an
+# injection attempt is a system problem, an untreated cardiac event is not.
+#
+# Each rule states the conditions that must ALL hold. Absent conditions are
+# wildcards.
+#
+# user_message is what the person sees. It never names the detector that fired:
+# telling an attacker which rule blocked them is a free oracle for evasion.
+# The reason codes carry that detail internally.
+
+version: "1.0"
+
+rules:
+  # --- 1. Safety of the person ---------------------------------------------
+
+  - id: MED-ACUTE
+    description: Acute injury or medical emergency language
+    when:
+      any_reason_code: [MEDICAL_ACUTE]
+    decision: REFUSE_MEDICAL
+    referral: true
+    user_message: >-
+      What you are describing needs a qualified medical professional, not a
+      training app. Please contact a doctor or physiotherapist. If this is
+      sudden severe pain, numbness, chest pain or difficulty breathing, seek
+      urgent care now. I can help with your training again once you have been
+      assessed.
+
+  - id: MED-INTENT
+    description: The classifier judged the turn to be a medical concern
+    when:
+      intent: MEDICAL_CONCERN
+    decision: REFUSE_MEDICAL
+    referral: true
+    user_message: >-
+      That sounds like a medical question rather than a training one. I am not
+      able to diagnose injuries or advise on medication. Please speak to a
+      doctor or physiotherapist, and I will be glad to help with programming
+      once you have their guidance.
+
+  - id: MED-CHRONIC
+    description: Ongoing diagnosed condition used to request training around it
+    when:
+      any_reason_code: [MEDICAL_CHRONIC]
+    decision: REFUSE_MEDICAL
+    referral: true
+    user_message: >-
+      Training around a diagnosed condition needs input from the clinician who
+      knows your case. Ask them what movements and loads are safe for you, and
+      I can build a programme within those limits.
+
+  - id: SAFE-EATING
+    description: Disordered eating or extreme weight-loss framing
+    when:
+      any_reason_code: [DISORDERED_EATING]
+    decision: REFUSE_MEDICAL
+    referral: true
+    user_message: >-
+      I am not able to help with that request. Rapid or extreme weight loss
+      carries real health risks, and this is something to discuss with a
+      doctor or a registered dietitian who can support you properly.
+
+  # --- 2. Security of the system -------------------------------------------
+
+  - id: SEC-BLOCK-HIGH
+    description: High-confidence adversarial input
+    when:
+      min_risk_score: 0.75
+    decision: BLOCK
+    user_message: >-
+      I cannot help with that request. I am a fitness coaching assistant, so
+      ask me about your training, your logged sessions or your programme.
+
+  - id: SEC-BLOCK-EXFIL
+    description: Any attempt to extract credentials or other users' data
+    when:
+      any_reason_code: [EXFILTRATION_ATTEMPT, TOOL_ABUSE]
+      min_risk_score: 0.5
+    decision: BLOCK
+    user_message: >-
+      I cannot help with that request. I am a fitness coaching assistant, so
+      ask me about your training, your logged sessions or your programme.
+
+  - id: SEC-SANITISE
+    description: Moderate risk; strip to redacted text and continue
+    when:
+      min_risk_score: 0.5
+      max_risk_score: 0.75
+    decision: SANITISE
+    user_message: ""
+
+  # --- 3. Correctness of the answer ----------------------------------------
+
+  - id: CLARIFY-LOW-CONFIDENCE
+    description: A workout log that could not be parsed with confidence
+    when:
+      intent: LOG_WORKOUT
+      max_extraction_confidence: 0.55
+    decision: CLARIFY
+    user_message: >-
+      I want to log that accurately rather than guess. Could you tell me the
+      exercise, the weight, and how many sets and reps you did?
+
+  - id: CLARIFY-MISSING-LOAD
+    description: An exercise identified but no load recorded
+    when:
+      intent: LOG_WORKOUT
+      any_reason_code: [MISSING_REQUIRED_FIELD]
+      max_extraction_confidence: 0.75
+    decision: CLARIFY
+    user_message: >-
+      I have got part of that. What weight did you use, and how many sets and
+      reps?
+
+  # --- 4. Scope -------------------------------------------------------------
+
+  - id: SCOPE-DECLINE
+    description: Question outside the fitness domain
+    when:
+      intent: OUT_OF_SCOPE
+    decision: REFUSE_MEDICAL
+    referral: false
+    out_of_scope: true
+    user_message: >-
+      That is outside what I can help with. I am a strength training coach, so
+      I can help with your programme, your logged sessions and your progress.
+
+  - id: SCOPE-REASON
+    description: Detector marked the turn out of domain
+    when:
+      any_reason_code: [OUT_OF_DOMAIN]
+    decision: REFUSE_MEDICAL
+    referral: false
+    out_of_scope: true
+    user_message: >-
+      That is outside what I can help with. Ask me about your training and I
+      will do my best.
+
+  # --- 5. Small talk --------------------------------------------------------
+  # Answered here rather than forwarded. A greeting needs no retrieval and no
+  # coaching computation, so sending it downstream would spend an LLM call and
+  # about a second of latency to say hello.
+
+  - id: SMALLTALK-LOCAL
+    description: Greeting or acknowledgement, answered without downstream calls
+    when:
+      intent: SMALL_TALK
+    decision: CLARIFY
+    user_message: >-
+      Hello. Tell me what you trained and I will log it, or ask me about your
+      programme, your progress or your technique.
+
+  # --- 6. Default -----------------------------------------------------------
+
+  - id: ALLOW-DEFAULT
+    description: Nothing matched; proceed normally
+    when: {}
+    decision: ALLOW
+    user_message: ""
