@@ -54,10 +54,10 @@ def build_report(run_dir: Path) -> str:
 | | |
 | --- | --- |
 | Assessment date | {datetime.now(UTC).date().isoformat()} |
-| Target commit | `{manifest.get('git_commit', 'unknown')[:12]}` |
-| Working tree clean | {'no' if manifest.get('git_dirty') else 'yes'} |
-| Test cases executed | {manifest.get('case_count', 0)} |
-| Evidence run | `{manifest.get('run_id', '-')}` |
+| Target commit | `{manifest.get("git_commit", "unknown")[:12]}` |
+| Working tree clean | {"no" if manifest.get("git_dirty") else "yes"} |
+| Test cases executed | {manifest.get("case_count", 0)} |
+| Evidence run | `{manifest.get("run_id", "-")}` |
 
 ---
 """
@@ -67,15 +67,17 @@ def build_report(run_dir: Path) -> str:
     sections.append(
         f"""## 1. Executive Summary
 
-{todo(
-    "Three or four paragraphs for a reader who will not read the rest. State "
-    "what was tested, the headline result, the most serious finding and what "
-    "you recommend. Write it last, once you know what you found."
-)}
+{
+            todo(
+                "Three or four paragraphs for a reader who will not read the rest. State "
+                "what was tested, the headline result, the most serious finding and what "
+                "you recommend. Write it last, once you know what you found."
+            )
+        }
 **Facts available to you:**
 
-- {manifest.get('case_count', 0)} cases executed
-- Commit `{manifest.get('git_commit', 'unknown')[:12]}`
+- {manifest.get("case_count", 0)} cases executed
+- Commit `{manifest.get("git_commit", "unknown")[:12]}`
 - {len(passed)} defended, {len(failed)} failed, {len(review)} require analysis
 - Detector benchmark at the time of testing: see `eval/gatekeeper/results/`
 
@@ -98,11 +100,13 @@ def build_report(run_dir: Path) -> str:
 
 **Out of scope**
 
-{todo(
-    "State what you did NOT test and why: the DeepSeek API itself, MongoDB "
-    "server hardening, network transport, physical security. A scope section "
-    "that does not say what was excluded is not a scope section."
-)}
+{
+            todo(
+                "State what you did NOT test and why: the DeepSeek API itself, MongoDB "
+                "server hardening, network transport, physical security. A scope section "
+                "that does not say what was excluded is not a scope section."
+            )
+        }
 **Authorisation**
 
 This is the author's own coursework system, tested locally against a local
@@ -116,11 +120,13 @@ deployment. No third-party system was tested.
     sections.append(
         f"""## 3. Evaluation Methodology
 
-{todo(
-    "Describe how you designed the cases. Why these families? How did you "
-    "choose payloads? What did you do when a case was ambiguous? Reference "
-    "OWASP LLM Top 10 where your cases map to it."
-)}
+{
+            todo(
+                "Describe how you designed the cases. Why these families? How did you "
+                "choose payloads? What did you do when a case was ambiguous? Reference "
+                "OWASP LLM Top 10 where your cases map to it."
+            )
+        }
 **Harness**
 
 Cases are YAML in `eval/redteam/cases/`, validated on load. `runner.py`
@@ -137,20 +143,20 @@ string comparison.
 
 **Complementary tooling**
 
-{todo(
-    "If you ran garak or promptfoo for additional automated probe coverage, "
-    "describe what they added and how their results compare to the "
-    "hand-written cases. If you did not, say so."
-)}
+{
+            todo(
+                "If you ran garak or promptfoo for additional automated probe coverage, "
+                "describe what they added and how their results compare to the "
+                "hand-written cases. If you did not, say so."
+            )
+        }
 ---
 """
     )
 
     # --- 4. Test cases -----------------------------------------------------
     sections.append("## 4. Test Cases Performed\n")
-    sections.append(
-        "| ID | Title | Family | OWASP | Outcome |\n| --- | --- | --- | --- | --- |"
-    )
+    sections.append("| ID | Title | Family | OWASP | Outcome |\n| --- | --- | --- | --- | --- |")
     for case in cases:
         path = run_dir / f"{case['id']}.json"
         title, owasp = case["id"], "-"
@@ -161,17 +167,14 @@ string comparison.
         marker = {"PASS": "Defended", "FAIL": "**Vulnerable**", "REVIEW": "Analysis"}[
             case["verdict"]
         ]
-        sections.append(
-            f"| `{case['id']}` | {title} | {case['family']} | {owasp} | {marker} |"
-        )
+        sections.append(f"| `{case['id']}` | {title} | {case['family']} | {owasp} | {marker} |")
     sections.append("\n---\n")
 
     # --- 5. Vulnerabilities ------------------------------------------------
     sections.append("## 5. Vulnerabilities Identified\n")
     if failed:
         sections.append(
-            f"{len(failed)} case(s) failed. Each is written up below with its "
-            "evidence.\n"
+            f"{len(failed)} case(s) failed. Each is written up below with its evidence.\n"
         )
         for case in failed:
             path = run_dir / f"{case['id']}.json"
@@ -225,12 +228,14 @@ string comparison.
     sections.append(
         f"""## 7. Mitigation Strategies
 
-{todo(
-    "For each finding: what would fix it, what it would cost, and what "
-    "residual risk remains afterwards. Distinguish what you actually fixed "
-    "from what you are recommending. A mitigation section that only lists "
-    "generic advice is not evidence of analysis."
-)}
+{
+            todo(
+                "For each finding: what would fix it, what it would cost, and what "
+                "residual risk remains afterwards. Distinguish what you actually fixed "
+                "from what you are recommending. A mitigation section that only lists "
+                "generic advice is not evidence of analysis."
+            )
+        }
 **Controls already present** (verify each before citing it)
 
 | Control | Where | Evidence |
@@ -252,12 +257,14 @@ string comparison.
     sections.append(
         f"""## 8. Reflection
 
-{todo(
-    "What did testing your own system teach you? Where were you wrong about "
-    "your own design? Which defence turned out to matter most, and which was "
-    "theatre? What would you do differently? This section rewards honesty "
-    "about your own mistakes more than confidence."
-)}
+{
+            todo(
+                "What did testing your own system teach you? Where were you wrong about "
+                "your own design? Which defence turned out to matter most, and which was "
+                "theatre? What would you do differently? This section rewards honesty "
+                "about your own mistakes more than confidence."
+            )
+        }
 ---
 
 ## Appendix: full evidence

@@ -53,8 +53,7 @@ def _format_trace(trace: dict[str, Any]) -> str:
         return "_No decision trace captured._"
 
     lines = [
-        f"- Decision: `{trace.get('decision', '?')}` via rule "
-        f"`{trace.get('policy_rule_id', '?')}`",
+        f"- Decision: `{trace.get('decision', '?')}` via rule `{trace.get('policy_rule_id', '?')}`",
         f"- Intent: `{trace.get('intent', '?')}`",
         f"- Risk score: `{trace.get('risk_score', '?')}`",
     ]
@@ -77,9 +76,9 @@ def _format_trace(trace: dict[str, Any]) -> str:
         lines.append("| --- | --- | --- | --- |")
         for layer in layers:
             codes = ", ".join(layer.get("reason_codes", [])) or "-"
-            transforms = ", ".join(
-                t.get("kind", "") for t in layer.get("transformations", [])
-            ) or "-"
+            transforms = (
+                ", ".join(t.get("kind", "") for t in layer.get("transformations", [])) or "-"
+            )
             lines.append(
                 f"| {layer.get('layer', '?')} | {layer.get('duration_ms', 0)} | "
                 f"{codes} | {transforms[:70]} |"
@@ -126,20 +125,20 @@ def render_case(evidence: dict[str, Any]) -> str:
 
     latency = evidence.get("total_latency_ms", 0)
 
-    return f"""### {evidence['case_id']}: {evidence['title']}
+    return f"""### {evidence["case_id"]}: {evidence["title"]}
 
 | Field | Value |
 | --- | --- |
-| Test ID | `{evidence['case_id']}` |
-| Family | {evidence.get('family', '-')} |
-| OWASP reference | {evidence.get('owasp_ref') or '-'} |
-| Severity if failed | {evidence.get('severity_if_failed', '-')} |
-| Executed | {evidence.get('executed_at', '-')} |
+| Test ID | `{evidence["case_id"]}` |
+| Family | {evidence.get("family", "-")} |
+| OWASP reference | {evidence.get("owasp_ref") or "-"} |
+| Severity if failed | {evidence.get("severity_if_failed", "-")} |
+| Executed | {evidence.get("executed_at", "-")} |
 | Latency | {latency:.0f} ms |
 
 **Objective**
 
-{evidence.get('objective', '-')}
+{evidence.get("objective", "-")}
 
 **Input**
 
@@ -149,7 +148,7 @@ def render_case(evidence: dict[str, Any]) -> str:
 
 **Expected result**
 
-{evidence.get('expected_behaviour', '-')}
+{evidence.get("expected_behaviour", "-")}
 
 **Actual result**
 
@@ -157,7 +156,7 @@ def render_case(evidence: dict[str, Any]) -> str:
 
 **Evidence: decision trace**
 
-{_format_trace(last.get('trace', {}))}
+{_format_trace(last.get("trace", {}))}
 
 **Observations**
 
@@ -165,7 +164,7 @@ def render_case(evidence: dict[str, Any]) -> str:
 
 **Outcome**
 
-{outcome} Runner note: {evidence.get('verdict_reason', '-')}
+{outcome} Runner note: {evidence.get("verdict_reason", "-")}
 
 ---
 """

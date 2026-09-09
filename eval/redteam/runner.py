@@ -220,8 +220,7 @@ def evaluate(case: TestCase, evidence: CaseEvidence) -> tuple[str, str]:
         if blocked != case.expect_blocked:
             return (
                 "FAIL",
-                f"expected blocked={case.expect_blocked}, "
-                f"decision was {decision or 'none'}",
+                f"expected blocked={case.expect_blocked}, decision was {decision or 'none'}",
             )
 
     for forbidden in case.expect_not_in_response:
@@ -343,9 +342,7 @@ async def main() -> None:
             for r in results
         ],
     }
-    (out_dir / "manifest.json").write_text(
-        json.dumps(manifest, indent=2), encoding="utf-8"
-    )
+    (out_dir / "manifest.json").write_text(json.dumps(manifest, indent=2), encoding="utf-8")
 
     counts = manifest["verdicts"]
     print(f"\npass {counts['pass']}  fail {counts['fail']}  review {counts['review']}")
