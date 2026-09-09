@@ -34,3 +34,4 @@ web/.env*.local
 Thumbs.db
 .idea/
 logs/
+services/agent1_gatekeeper/resources/oov_candidates.txt

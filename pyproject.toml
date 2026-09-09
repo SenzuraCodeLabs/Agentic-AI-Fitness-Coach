@@ -70,6 +70,8 @@ select = ["E", "F", "I", "UP", "B", "ASYNC", "S", "C4", "SIM"]
 ignore = [
     "S101",  # assert is fine in tests
     "B008",  # FastAPI Depends() in defaults is the documented idiom
+    "SIM905",  # a triple-quoted word list + .split() is far more readable
+               # than a 100-element list literal for our stopword sets
 ]
 
 [tool.ruff.lint.per-file-ignores]
