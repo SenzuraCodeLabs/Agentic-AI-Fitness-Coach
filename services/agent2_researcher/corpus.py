@@ -12,6 +12,82 @@ from __future__ import annotations
 
 CORPUS: list[dict[str, str]] = [
     {
+        "id": "activity-001",
+        "topic": "cardio aerobic activity",
+        "source": "CDC, Adult Activity: An Overview",
+        "url": "https://www.cdc.gov/physical-activity-basics/guidelines/adults.html",
+        "text": (
+            "Adults should aim for at least 150 minutes of moderate-intensity "
+            "aerobic activity per week, or 75 minutes of vigorous activity, "
+            "alongside muscle-strengthening activity on at least two days. "
+            "Activity can be spread across the week."
+        ),
+    },
+    {
+        "id": "bands-001",
+        "topic": "equipment resistance bands home training",
+        "source": "Lopes et al. (2019), elastic versus conventional resistance meta-analysis",
+        "url": "https://pubmed.ncbi.nlm.nih.gov/30815258/",
+        "text": (
+            "A systematic review found similar strength improvements with elastic "
+            "resistance and conventional resistance equipment. Resistance bands "
+            "are a practical training option when machines or free weights are "
+            "unavailable; the evidence does not imply that every exercise is "
+            "interchangeable."
+        ),
+    },
+    {
+        "id": "failure-001",
+        "topic": "training to failure",
+        "source": "Grgic et al. (2022), failure versus non-failure meta-analysis",
+        "url": "https://pubmed.ncbi.nlm.nih.gov/33497853/",
+        "text": (
+            "Training every set to repetition failure is not required for gains "
+            "in strength or muscle size. This meta-analysis found no significant "
+            "overall difference between failure and non-failure training for "
+            "those outcomes; study populations and protocols limit "
+            "generalisation."
+        ),
+    },
+    {
+        "id": "sleep-002",
+        "topic": "sleep recovery",
+        "source": "CDC, About Sleep",
+        "url": "https://www.cdc.gov/sleep/about/",
+        "text": (
+            "Adults aged 18 to 60 generally need at least seven hours of sleep "
+            "each night. Sleep quality also matters. A consistent sleep schedule "
+            "is a useful part of a recovery routine; sleep duration alone cannot "
+            "determine readiness to increase a training load."
+        ),
+    },
+    {
+        "id": "acsm-001",
+        "topic": "progression stalling plateau",
+        "source": "ACSM (2009), Progression Models in Resistance Training for Healthy Adults",
+        "url": "https://pubmed.ncbi.nlm.nih.gov/19204579/",
+        "text": (
+            "Progression should reflect the individual's goal, capacity and "
+            "training experience. ACSM recommends increasing load by 2 to 10 "
+            "percent when the current workload can be performed for one or two "
+            "repetitions beyond the desired number. A stalled load by itself does "
+            "not establish that a heavier weight is appropriate."
+        ),
+    },
+    {
+        "id": "rir-accuracy-001",
+        "topic": "RPE RIR accuracy effort",
+        "source": "Halperin et al. (2022), predicting repetitions to task failure",
+        "url": "https://pubmed.ncbi.nlm.nih.gov/34542869/",
+        "text": (
+            "Repetitions-in-reserve estimates are subjective rather than exact "
+            "measurements. Research on predicting repetitions to task failure "
+            "finds variable accuracy. Treat RPE and RIR as context alongside "
+            "completed reps, load and technique, rather than as precise "
+            "guarantees."
+        ),
+    },
+    {
         "id": "vol-001",
         "topic": "training volume",
         "source": "Schoenfeld et al. (2017), Journal of Sports Sciences",

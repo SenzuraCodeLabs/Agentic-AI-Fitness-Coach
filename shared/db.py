@@ -81,6 +81,10 @@ async def ensure_indexes() -> None:
     db = get_db()
 
     plans: dict[str, list[IndexModel]] = {
+        "answer_cache": [
+            IndexModel([("expires_at", ASCENDING)], expireAfterSeconds=0, name="ttl_expiry"),
+            IndexModel([("user_id", ASCENDING)], name="by_user"),
+        ],
         USERS: [
             IndexModel([("email", ASCENDING)], unique=True, name="uniq_email"),
         ],

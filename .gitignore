@@ -43,3 +43,4 @@ web/out/
 
 # Red-team evidence: regenerate with the suite; keep the report drafts
 eval/redteam/evidence/
+.tmp/

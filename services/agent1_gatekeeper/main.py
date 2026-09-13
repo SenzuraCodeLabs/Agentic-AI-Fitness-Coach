@@ -64,7 +64,7 @@ async def assess(
         )
         return refusal.model_dump(mode="json")
 
-    async with AgentClient(AgentName.GATEKEEPER) as client:
+    async with AgentClient(AgentName.GATEKEEPER, max_attempts=1, timeout=45) as client:
         coach_reply = await client.send(
             recipient=AgentName.COACH,
             path="/a2a/coach",

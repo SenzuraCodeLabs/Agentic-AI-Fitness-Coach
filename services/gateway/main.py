@@ -174,6 +174,10 @@ async def chat(
             timezone=user.get("timezone", "UTC"),
             correlation_id=correlation_id,
         )
+        threat_notes = next(
+            (t.notes for t in result.layer_traces if t.layer == "L5_threat_scorer"), {}
+        )
+        judge_tokens = int(threat_notes.get("judge", {}).get("tokens", 0))
 
         # The transparency payload. This is the explainability deliverable:
         # the user can see the intent, the risk score and which rule fired.
@@ -186,6 +190,8 @@ async def chat(
                 "policy_rule_id": result.policy_rule_id,
                 "reason_codes": [str(c) for c in result.reason_codes],
                 "signal_contributions": result.trust.signal_contributions,
+                "signal_status": threat_notes.get("signal_status", {}),
+                "semantic_similarity": threat_notes.get("semantic", {}).get("max_similarity"),
                 "extraction_confidence": result.trust.extraction_confidence,
                 "pipeline_ms": round(result.total_ms, 1),
             },
@@ -225,17 +231,17 @@ async def chat(
             db=db,
         )
 
-        # Terminal decisions end here: no downstream call, no token spend.
+        # Terminal decisions end here; an optional judge may already have spent tokens.
         if result.is_terminal or result.envelope is None:
             yield _sse("message", {"text": result.user_message, "terminal": True})
-            yield _sse("done", {"message_id": message_id, "quota": quota})
             await record_usage(
                 db,
                 user_id=user_id,
                 correlation_id=correlation_id,
-                tokens_used=0,
+                tokens_used=judge_tokens,
                 decision=str(result.decision),
             )
+            yield _sse("done", {"message_id": message_id, "quota": quota})
             return
 
         # A workout log is persisted before the coach is consulted, so the
@@ -259,7 +265,9 @@ async def chat(
 
         tokens_used = 0
         try:
-            async with AgentClient(AgentName.GATEWAY) as client:
+            # Replaying a timed-out generation can spend twice. The UI may retry
+            # deliberately; the gateway must not multiply paid calls silently.
+            async with AgentClient(AgentName.GATEWAY, max_attempts=1, timeout=60) as client:
                 reply = await client.send(
                     recipient=AgentName.GATEKEEPER,
                     path="/a2a/assess",
@@ -280,7 +288,13 @@ async def chat(
                     text = result.pii_vault.rehydrate(text)
                 yield _sse(
                     "message",
-                    {"text": text, "citations": reply.payload.citations, "terminal": False},
+                    {
+                        "text": text,
+                        "citations": reply.payload.citations,
+                        "terminal": False,
+                        "answer_route": reply.payload.recommendation.get("answer_route"),
+                        "tokens_used": tokens_used + judge_tokens,
+                    },
                 )
             else:
                 yield _sse("message", {"text": "Logged.", "terminal": False})
@@ -291,7 +305,12 @@ async def chat(
                 "error",
                 {
                     "message": (
-                        "The coaching service is temporarily unavailable. Your session was saved."
+                        "The coaching service is temporarily unavailable. "
+                        + (
+                            "Your session was saved."
+                            if hasattr(result.envelope.payload, "sets_logged")
+                            else "Please try your question again."
+                        )
                     )
                 },
             )
@@ -300,8 +319,8 @@ async def chat(
             db,
             user_id=user_id,
             correlation_id=correlation_id,
-            tokens_used=tokens_used,
-            model=settings.deepseek_model_strong,
+            tokens_used=tokens_used + judge_tokens,
+            model=settings.deepseek_model_fast if tokens_used + judge_tokens else "",
             decision=str(result.decision),
         )
         yield _sse("done", {"message_id": message_id, "quota": quota})

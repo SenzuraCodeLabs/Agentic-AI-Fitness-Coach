@@ -323,7 +323,8 @@ async def score_judge(
                 # tokens on reasoning before producing content. A small budget
                 # returns an empty string, so this is set well above what the
                 # JSON itself needs.
-                max_tokens=800,
+                max_tokens=180,
+                extra_body={"thinking": {"type": "disabled"}},
                 response_format={"type": "json_object"},
             ),
             timeout=timeout,
@@ -376,7 +377,9 @@ async def assess_threat(
 
         judge_result: dict[str, Any] = {}
         judge_score = 0.0
+        judge_attempted = False
         if use_judge and judge_band[0] <= combined <= judge_band[1] and texts:
+            judge_attempted = True
             judge_result = await score_judge(texts[0])
             if judge_result:
                 # The judge may only RAISE the score. A detector that can be
@@ -420,7 +423,20 @@ async def assess_threat(
             {"id": h.rule_id, "category": h.category, "weight": h.weight} for h in rule_hits
         ],
         "semantic": semantic_info,
-        "judge_invoked": bool(judge_result),
+        "judge_invoked": judge_attempted,
+        "signal_status": {
+            "rules": "completed",
+            "semantic": "completed" if semantic_info else "unavailable",
+            "judge": (
+                "completed"
+                if judge_result
+                else "unavailable"
+                if judge_attempted
+                else "outside_band"
+                if use_judge
+                else "disabled"
+            ),
+        },
         "judge": judge_result,
         "variants_scanned": len(texts),
     }

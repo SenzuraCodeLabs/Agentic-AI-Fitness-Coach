@@ -15,7 +15,7 @@ from __future__ import annotations
 from functools import lru_cache
 from pathlib import Path
 
-from pydantic import SecretStr, field_validator
+from pydantic import Field, SecretStr, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
@@ -39,6 +39,9 @@ class Settings(BaseSettings):
     deepseek_model_fast: str = "deepseek-v4-flash"
     deepseek_model_strong: str = "deepseek-v4-pro"
     llm_timeout_seconds: float = 20.0
+    llm_fallback_enabled: bool = True
+    llm_judge_enabled: bool = False
+    llm_max_output_tokens: int = Field(default=350, ge=64, le=1000)
 
     # --- Database ----------------------------------------------------------
     mongodb_uri: SecretStr

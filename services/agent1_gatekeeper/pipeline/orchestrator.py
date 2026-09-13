@@ -44,6 +44,7 @@ from services.agent1_gatekeeper.pipeline import (
 )
 from services.agent1_gatekeeper.pipeline.base import LayerTrace
 from services.agent1_gatekeeper.pipeline.intent import classify_intent
+from shared.config import get_settings
 from shared.contracts.enums import AgentName, Decision, Intent, ReasonCode
 from shared.contracts.envelope import Envelope, TrustMetadata
 from shared.logging import get_correlation_id, get_logger
@@ -97,11 +98,13 @@ async def run_pipeline(
     text: str,
     *,
     timezone: str = "UTC",
-    use_judge: bool = True,
+    use_judge: bool | None = None,
     correlation_id: str | None = None,
 ) -> PipelineResult:
     """Run the full Gatekeeper pipeline over one user message."""
     started = time.perf_counter()
+    if use_judge is None:
+        use_judge = get_settings().llm_judge_enabled
     cid = correlation_id or get_correlation_id()
     traces: list[LayerTrace] = []
     reason_codes: list[ReasonCode] = []

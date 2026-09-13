@@ -12,6 +12,9 @@ grounded while being unsupported.
 
 from __future__ import annotations
 
+import hashlib
+import json
+import re
 from functools import lru_cache
 from typing import Any
 
@@ -53,8 +56,8 @@ def _embedder():
 def _collection():
     """Open the persistent collection, seeding it on first use.
 
-    Chroma persists to disk, so seeding is idempotent: the count check means a
-    restart does not re-embed the corpus.
+    A content fingerprint refreshes changed passages while an unchanged corpus
+    avoids re-embedding across restarts.
     """
     import chromadb
 
@@ -65,18 +68,33 @@ def _collection():
         metadata={"hnsw:space": "l2"},
     )
 
-    if collection.count() == 0:
+    fingerprint = hashlib.sha256(json.dumps(CORPUS, sort_keys=True).encode()).hexdigest()
+    if (collection.metadata or {}).get("corpus_hash") != fingerprint:
         log.info("seeding_corpus", chunks=len(CORPUS))
         embeddings = _embedder().encode(
             [c["text"] for c in CORPUS],
             normalize_embeddings=True,
             show_progress_bar=False,
         )
-        collection.add(
+        collection.upsert(
             ids=[c["id"] for c in CORPUS],
             documents=[c["text"] for c in CORPUS],
             embeddings=[e.tolist() for e in embeddings],
-            metadatas=[{"source": c["source"], "topic": c["topic"]} for c in CORPUS],
+            metadatas=[
+                {"source": c["source"], "topic": c["topic"], "url": c.get("url", "")}
+                for c in CORPUS
+            ],
+        )
+        # Remove only retired curated IDs, never unrelated imported documents.
+        old_ids = json.loads((collection.metadata or {}).get("curated_ids", "[]"))
+        retired = sorted(set(old_ids) - {c["id"] for c in CORPUS})
+        if retired:
+            collection.delete(ids=retired)
+        collection.modify(
+            metadata={
+                "corpus_hash": fingerprint,
+                "curated_ids": json.dumps([c["id"] for c in CORPUS]),
+            }
         )
         log.info("corpus_seeded", count=collection.count())
 
@@ -88,7 +106,7 @@ def retrieve(query: str, top_k: int = DEFAULT_TOP_K) -> list[dict[str, Any]]:
 
     Every chunk carries its source, so the coach can cite what it used.
     """
-    if not query.strip():
+    if not query.strip() or top_k <= 0:
         return []
 
     collection = _collection()
@@ -96,7 +114,7 @@ def retrieve(query: str, top_k: int = DEFAULT_TOP_K) -> list[dict[str, Any]]:
 
     results = collection.query(
         query_embeddings=[query_vector[0].tolist()],
-        n_results=min(top_k, collection.count()),
+        n_results=min(max(top_k * 4, 12), collection.count()),
     )
 
     chunks: list[dict[str, Any]] = []
@@ -114,6 +132,7 @@ def retrieve(query: str, top_k: int = DEFAULT_TOP_K) -> list[dict[str, Any]]:
                 "text": doc,
                 "source": meta.get("source", "unknown"),
                 "topic": meta.get("topic", ""),
+                "url": meta.get("url", ""),
                 # Reported as similarity rather than distance because that is
                 # the intuitive direction for a reader of the transparency
                 # panel. Scaled across the accepted band so a chunk at the
@@ -123,8 +142,68 @@ def retrieve(query: str, top_k: int = DEFAULT_TOP_K) -> list[dict[str, Any]]:
             }
         )
 
+    chunks = rerank(query, chunks, top_k)
     log.info("retrieval_complete", query_length=len(query), returned=len(chunks))
     return chunks
+
+
+_STOP = set(
+    (
+        "how what when should i my the a an to for of is do does can many much per in and at has"
+    ).split()
+)
+
+
+def _terms(text: str) -> set[str]:
+    words = set(re.findall(r"[a-z]+", text.lower())) - _STOP
+    aliases = {
+        "stalled": "stalling",
+        "stuck": "stalling",
+        "plateau": "stalling",
+        "reps": "rep",
+        "sets": "set",
+        "weekly": "week",
+        "correctly": "technique",
+        "sleep": "recovery",
+        "rpe": "autoregulation",
+    }
+    return {aliases.get(w, w) for w in words}
+
+
+def rerank(query: str, chunks: list[dict[str, Any]], top_k: int) -> list[dict[str, Any]]:
+    """Blend topic/term relevance with dense similarity, then diversify sources.
+
+    A source appears once and near-identical passages cannot fill the answer.
+    Scores are ranking heuristics, not calibrated probabilities.
+    """
+    terms = _terms(query)
+    ranked = []
+    for chunk in chunks:
+        topic_terms = _terms(chunk.get("topic", ""))
+        overlap = len(terms & _terms(chunk["text"])) / max(len(terms), 1)
+        topic = len(terms & topic_terms) / max(len(topic_terms), 1)
+        score = 0.55 * chunk.get("score", 0) + 0.25 * overlap + 0.20 * topic
+        if score >= 0.12:
+            ranked.append({**chunk, "score": round(score, 4)})
+    # Never pad strong topic results with distant neighbours just to reach k.
+    relative_floor = max((c["score"] for c in ranked), default=0) * 0.55
+    ranked = [c for c in ranked if c["score"] >= relative_floor]
+    selected: list[dict[str, Any]] = []
+    sources: set[str] = set()
+    for chunk in sorted(ranked, key=lambda c: c["score"], reverse=True):
+        source = (chunk.get("url") or chunk["source"]).strip().casefold()
+        words = _terms(chunk["text"])
+        duplicate = any(
+            len(words & _terms(c["text"])) / max(len(words | _terms(c["text"])), 1) > 0.8
+            for c in selected
+        )
+        if source in sources or duplicate:
+            continue
+        selected.append(chunk)
+        sources.add(source)
+        if len(selected) >= top_k:
+            break
+    return selected
 
 
 def warm_up() -> None:

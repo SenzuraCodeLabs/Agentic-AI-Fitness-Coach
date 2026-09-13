@@ -136,7 +136,8 @@ _OFF_DOMAIN = re.compile(
 _FITNESS_VOCAB = re.compile(
     r"(?i)\b("
     r"squat|bench|deadlift|press|curl|row|pull ?up|push ?up|dip|lunge|"
-    r"gym|train|workout|exercise|lift|rep|set|muscle|"
+    r"gym|train(?:ing|ed)?|workouts?|exercises?|lift(?:ed|ing|s)?|reps?|sets?|muscles?|"
+    r"squatted|benched|deadlifted|sleep|recovery|resistance bands|"
     r"kg|lbs|rpe|rir|1rm|pr|hypertroph|strength|cardio|"
     r"protein|macro|calorie|bulk|cut|deload|volume|tempo|"
     r"quad|hamstring|glute|delt|lat|bicep|tricep|pec|trap|chest|back|leg|arm|shoulder"
@@ -227,6 +228,12 @@ def classify_intent(expanded_text: str, original_text: str = "") -> IntentResult
             return IntentResult(Intent.OUT_OF_SCOPE, 0.85, trace)
 
         is_question = bool(_QUESTION_MARKERS.search(combined))
+        # A load describes the plateau; it does not make this a completed session.
+        if has_fitness_vocab and re.search(
+            r"(?i)\b(stall(?:ed|ing)?|plateau(?:ed)?|stuck|not improving)\b", combined
+        ):
+            trace.notes = {"matched": "plateau_query"}
+            return IntentResult(Intent.PROGRAM_QUERY, 0.9, trace)
 
         # 4. A workout log: a logging verb or numeric structure, and not framed
         #    as a question. "squats 100kg for 5" logs; "how much should I

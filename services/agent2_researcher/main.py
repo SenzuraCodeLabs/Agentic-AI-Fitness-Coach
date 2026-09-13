@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from fastapi import Depends
+from starlette.concurrency import run_in_threadpool
 
 from services.agent2_researcher.retrieval import retrieve, warm_up
 from shared.contracts.enums import AgentName
@@ -29,7 +30,7 @@ async def retrieve_evidence(
     query = payload.query if isinstance(payload, RetrievalPayload) else payload.raw_text_redacted
     top_k = payload.top_k if isinstance(payload, RetrievalPayload) else 4
 
-    chunks = retrieve(query, top_k=top_k)
+    chunks = await run_in_threadpool(retrieve, query, top_k=top_k)
     log.info("retrieval_served", chunks=len(chunks), hops=len(envelope.trace))
 
     reply = reply_envelope(

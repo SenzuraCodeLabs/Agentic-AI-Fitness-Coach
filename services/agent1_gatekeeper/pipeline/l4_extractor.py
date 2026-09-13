@@ -546,7 +546,7 @@ def extract(text: str, *, timezone: str = "UTC") -> ExtractionResult:
 
     if confidence < CONFIDENCE_THRESHOLD:
         trace.reason_codes.append(ReasonCode.LOW_CONFIDENCE)
-    if missing:
+    if any(field in missing for field in ("exercise", "load", "reps")):
         trace.reason_codes.append(ReasonCode.MISSING_REQUIRED_FIELD)
 
     trace.notes = {

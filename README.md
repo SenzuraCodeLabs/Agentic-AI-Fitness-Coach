@@ -2,6 +2,12 @@
 
 Coursework for IT3041 Information Retrieval and Web Analytics, SLIIT.
 
+**September 2026 update:** [Project review, token controls and per-agent plans](docs/improvement-plan.md).
+The redesigned coach answers workout calculations, predefined questions, strong
+evidence matches and cached questions locally. DeepSeek is a bounded fallback.
+The paid security judge is disabled by default; local rules and embeddings remain active.
+See [desktop preview](docs/screenshots/coach-desktop.png).
+
 Users log strength training in plain language. The system sanitises the input
 through a nine-layer trust pipeline, retrieves grounded exercise-science
 evidence, and computes progressive-overload recommendations deterministically.
@@ -21,8 +27,8 @@ Coach: You hit 8 reps at 100kg, the top of the 5-8 range, so add 5kg and
        Sources: Kraemer and Ratamess (2004); NSCA Essentials
 ```
 
-The load is computed by a pure function, not generated. The language model only
-phrases the result.
+The load and its explanation are computed locally. A language model is used
+only for questions that local answers and retrieved evidence do not adequately cover.
 
 ---
 
@@ -52,7 +58,8 @@ Full diagrams in [docs/architecture.md](docs/architecture.md). Wire protocol in
 
 ## Measured results
 
-Detector performance over 300 labelled utterances
+Detector performance over 300 labelled utterances. The local configuration was
+rerun for this update; the judge-enabled row is historical, not the current default.
 ([eval/gatekeeper/](eval/gatekeeper/)):
 
 | Configuration | Precision | Recall | F1 | False positive rate |
@@ -60,8 +67,9 @@ Detector performance over 300 labelled utterances
 | Rules + embeddings | 1.000 | 0.867 | 0.929 | 0.000 |
 | All three signals | **1.000** | **0.944** | **0.971** | **0.000** |
 
-Five of 90 adversarial inputs are not detected. They are analysed rather than
-hidden, in [ADR 0005](docs/adr/0005-hybrid-threat-detection.md).
+The current local default misses 12 of 90 adversarial inputs. The historical
+judge-enabled run missed five. See the [current benchmark](eval/gatekeeper/results/latest-nojudge.md)
+and [ADR 0005](docs/adr/0005-hybrid-threat-detection.md).
 
 | Measurement | Value |
 | --- | --- |
@@ -69,7 +77,7 @@ hidden, in [ADR 0005](docs/adr/0005-hybrid-threat-detection.md).
 | Full pipeline (p50) | 12 ms |
 | Full pipeline (p95, judge invoked) | 1.97 s |
 | Judge invocation rate | 19 of 300 cases |
-| Tests | 259 passing |
+| Tests after local-first update | 274 passing |
 
 ---
 
@@ -189,12 +197,12 @@ documented where the decision was made.
 
 | Limitation | Detail |
 | --- | --- |
-| Five adversarial inputs evade detection | Score below 0.15 on both cheap signals, so the band-gated judge never sees them. [ADR 0005](docs/adr/0005-hybrid-threat-detection.md) |
+| Twelve adversarial inputs evade the local default | The optional paid judge is disabled by default. See the current benchmark and project improvement guide. |
 | One symmetric key across all agents | Compromise of one service allows minting envelopes for any permitted route. [ADR 0001](docs/adr/0001-signed-envelope-protocol.md) |
 | Audit log is tamper-evident, not tamper-proof | An attacker who can rewrite the whole collection could recompute the chain. [ADR 0006](docs/adr/0006-audit-hash-chain.md) |
 | Rate limiting fails open | Deliberate: a database blip should not lock out every user. Replay protection fails closed. [Security review](docs/security-review.md) |
 | Refresh token in localStorage | Accepted; an httpOnly cookie needs a shared origin this deployment does not have |
-| Corpus is 20 curated chunks | Enough to demonstrate grounded retrieval, not a literature review |
+| Corpus is 26 curated chunks | Six new linked references; still not a literature review |
 | Rule-based intent classification | Deterministic and auditable, but misses phrasings a model would catch |
 | Single-instance digest scheduler | Several gateway replicas would each send the digest |
 

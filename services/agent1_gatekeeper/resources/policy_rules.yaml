@@ -118,7 +118,6 @@ rules:
     when:
       intent: LOG_WORKOUT
       any_reason_code: [MISSING_REQUIRED_FIELD]
-      max_extraction_confidence: 0.75
     decision: CLARIFY
     user_message: >-
       I have got part of that. What weight did you use, and how many sets and
