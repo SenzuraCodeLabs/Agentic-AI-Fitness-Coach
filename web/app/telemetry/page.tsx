@@ -62,7 +62,7 @@ export default function TelemetryPage() {
             </div>
             <p className="mt-2 text-xs text-muted">
               {quota.remaining.toLocaleString()} tokens remaining. The window
-              rolls 24 hours from your first request.
+              includes the preceding 24 hours.
             </p>
           </div>
 
@@ -77,15 +77,12 @@ export default function TelemetryPage() {
               <li>
                 <span className="font-medium text-ink">Short circuit.</span>
                 {" "}
-                A blocked or refused message never reaches the language model,
-                so an attack costs nothing to serve.
+                Workout calculations, predefined answers and strong evidence matches use no coaching API tokens. If enabled, the security judge can still spend tokens before a refusal.
               </li>
               <li>
                 <span className="font-medium text-ink">Band-gated judge.</span>
                 {" "}
-                The language-model classifier runs only when the cheap
-                detectors are uncertain, which was about 6 percent of messages
-                in benchmarking.
+                The paid classifier is disabled by default. When enabled, it runs only in the uncertain band. Rule and semantic checks remain local.
               </li>
             </ul>
           </div>

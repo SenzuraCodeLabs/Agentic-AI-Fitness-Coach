@@ -16,22 +16,27 @@ export function NavBar() {
   const router = useRouter();
 
   return (
-    <header className="border-b border-line bg-white">
-      <div className="mx-auto flex max-w-5xl items-center gap-6 px-4 py-3">
-        <Link href="/" className="text-base font-semibold">
-          FitCoach
+    <header className="app-header">
+      <a href="#main-content" className="skip-link">
+        Skip to content
+      </a>
+      <div className="nav-inner">
+        <Link href="/" className="brand">
+          <span className="brand-mark" aria-hidden="true">
+            F
+          </span>{" "}
+          FitCoach<span className="brand-dot">.</span>
         </Link>
 
         {user && (
-          <nav className="flex gap-4 text-sm">
+          <nav aria-label="Main navigation" className="main-nav">
             {LINKS.map((link) => (
               <Link
                 key={link.href}
                 href={link.href}
+                aria-current={pathname === link.href ? "page" : undefined}
                 className={
-                  pathname === link.href
-                    ? "font-medium text-ink"
-                    : "text-muted hover:text-ink"
+                  pathname === link.href ? "nav-link active" : "nav-link"
                 }
               >
                 {link.label}

@@ -123,11 +123,15 @@ export interface DecisionEvent {
   policy_rule_id: string;
   reason_codes: string[];
   signal_contributions: Record<string, number>;
+  signal_status?: Record<string, string>;
+  semantic_similarity?: number;
   extraction_confidence: number | null;
   pipeline_ms: number;
 }
 
 export interface Citation {
+  id?: string;
+  url?: string;
   source: string;
   snippet: string;
 }
@@ -203,7 +207,13 @@ export const getExplanation = (messageId: string) =>
 export interface ChatHandlers {
   onStatus?: (data: Record<string, unknown>) => void;
   onDecision?: (data: DecisionEvent) => void;
-  onMessage?: (text: string, citations: Citation[], terminal: boolean) => void;
+  onMessage?: (
+    text: string,
+    citations: Citation[],
+    terminal: boolean,
+    route?: string,
+    tokens?: number,
+  ) => void;
   onDone?: (messageId: string) => void;
   onError?: (message: string) => void;
 }
@@ -215,7 +225,11 @@ export interface ChatHandlers {
  * EventSource cannot set an Authorization header, and putting a bearer token
  * in a query string would leak it into server logs and browser history.
  */
-export async function streamChat(message: string, handlers: ChatHandlers) {
+export async function streamChat(
+  message: string,
+  handlers: ChatHandlers,
+  retry = true,
+): Promise<void> {
   const response = await fetch(`${API_BASE}/api/chat`, {
     method: "POST",
     headers: {
@@ -225,9 +239,9 @@ export async function streamChat(message: string, handlers: ChatHandlers) {
     body: JSON.stringify({ message }),
   });
 
-  if (response.status === 401) {
+  if (response.status === 401 && retry) {
     const refreshed = await tryRefresh();
-    if (refreshed) return streamChat(message, handlers);
+    if (refreshed) return streamChat(message, handlers, false);
   }
 
   if (!response.ok || !response.body) {
@@ -247,6 +261,7 @@ export async function streamChat(message: string, handlers: ChatHandlers) {
   const decoder = new TextDecoder();
   let buffer = "";
   let eventName = "";
+  let completed = false;
 
   for (;;) {
     const { done, value } = await reader.read();
@@ -281,9 +296,16 @@ export async function streamChat(message: string, handlers: ChatHandlers) {
                 String(payload.text ?? ""),
                 (payload.citations as Citation[]) ?? [],
                 Boolean(payload.terminal),
+                typeof payload.answer_route === "string"
+                  ? payload.answer_route
+                  : undefined,
+                typeof payload.tokens_used === "number"
+                  ? payload.tokens_used
+                  : undefined,
               );
               break;
             case "done":
+              completed = true;
               handlers.onDone?.(String(payload.message_id ?? ""));
               break;
             case "error":
@@ -296,4 +318,9 @@ export async function streamChat(message: string, handlers: ChatHandlers) {
       }
     }
   }
+  reader.releaseLock();
+  if (!completed)
+    handlers.onError?.(
+      "The response ended before completion. Check your history before resending a workout.",
+    );
 }

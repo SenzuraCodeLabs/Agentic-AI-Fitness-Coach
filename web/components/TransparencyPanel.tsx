@@ -36,13 +36,14 @@ export function TransparencyPanel({
   citations?: Citation[];
 }) {
   const [open, setOpen] = useState(false);
-  const style = DECISION_STYLES[decision.decision] ?? "bg-surface text-muted border-line";
+  const style =
+    DECISION_STYLES[decision.decision] ?? "bg-surface text-muted border-line";
 
   return (
     <div className="mt-2 text-xs">
       <button
         onClick={() => setOpen(!open)}
-        className="flex w-full items-center gap-2 text-left text-muted hover:text-ink"
+        className="flex w-full flex-wrap items-center gap-2 text-left text-muted hover:text-ink"
         aria-expanded={open}
       >
         <span className={`tag border ${style}`}>{decision.decision}</span>
@@ -60,7 +61,7 @@ export function TransparencyPanel({
             <div className="h-2 w-full overflow-hidden rounded bg-line">
               <div
                 className={`h-full ${riskColour(decision.risk_score)}`}
-                style={{ width: `${Math.max(decision.risk_score * 100, 2)}%` }}
+                style={{ width: `${decision.risk_score * 100}%` }}
               />
             </div>
             <div className="mt-1 text-muted">
@@ -78,7 +79,16 @@ export function TransparencyPanel({
                       <td className="py-0.5 pr-3 capitalize text-muted">
                         {signal}
                       </td>
-                      <td className="py-0.5 font-mono">{value.toFixed(3)}</td>
+                      <td className="py-1 font-mono">
+                        {decision.signal_status?.[signal] &&
+                        decision.signal_status[signal] !== "completed"
+                          ? ({
+                              disabled: "Disabled · local checks active",
+                              outside_band: "Not needed",
+                              unavailable: "Unavailable",
+                            }[decision.signal_status[signal]] ?? "Not run")
+                          : value.toFixed(3)}
+                      </td>
                     </tr>
                   ),
                 )}
@@ -86,6 +96,13 @@ export function TransparencyPanel({
             </table>
             <div className="mt-1 text-muted">
               Combined by maximum, so one confident signal is enough.
+              {decision.semantic_similarity !== undefined && (
+                <p className="mt-1">
+                  Raw semantic similarity:{" "}
+                  {decision.semantic_similarity.toFixed(3)}. Values below 0.45
+                  contribute zero risk.
+                </p>
+              )}
             </div>
           </div>
 
@@ -129,7 +146,20 @@ export function TransparencyPanel({
               <ul className="space-y-1">
                 {citations.map((citation, index) => (
                   <li key={index} className="border-l-2 border-line pl-2">
-                    <div className="font-medium">{citation.source}</div>
+                    <div className="font-medium">
+                      {citation.url && /^https:\/\//i.test(citation.url) ? (
+                        <a
+                          className="underline underline-offset-2"
+                          href={citation.url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                        >
+                          {citation.source} ↗
+                        </a>
+                      ) : (
+                        citation.source
+                      )}
+                    </div>
                     <div className="text-muted">{citation.snippet}</div>
                   </li>
                 ))}
